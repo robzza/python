@@ -1,0 +1,58 @@
+import requests
+import base64
+import time
+from concurrent.futures import ThreadPoolExecutor
+import aiohttp
+import asyncio
+from functools import wraps
+from asyncio.proactor_events import _ProactorBasePipeTransport
+
+def silence_event_loop_closed(func):
+    @wraps(func)
+    def wrapper(self, *args, **kwargs):
+        try:
+            return func(self, *args, **kwargs)
+        except RuntimeError as e:
+            if str(e) != 'Event loop is closed':
+                raise
+    return wrapper
+
+_ProactorBasePipeTransport.__del__ = silence_event_loop_closed(_ProactorBasePipeTransport.__del__)
+
+ip_list=[]
+# 下面第9行的authorization  需要自己登陆后手动获取
+async def download(page):
+    url='https://api.fofa.so/v1/search?'
+    headers={
+    'authorization': 'eyJhbGciOiJIUzUxMiIsImtpZCI6Ik5XWTVZakF4TVRkalltSTJNRFZsWXpRM05EWXdaakF3TURVMlkyWTNZemd3TUdRd1pUTmpZUT09IiwidHlwIjoiSldUIn0.eyJpZCI6MTAzNTU2LCJtaWQiOjEwMDA2MjkyNSwidXNlcm5hbWUiOiJiZ2JpbmdzZWMiLCJleHAiOjE2MjE5ODA3NzQuNDc5NTg0LCJpc3MiOiJyZWZyZXNoIn0.txor3e8ydq4PlhuSXXVuyBMtBoPgA1aDfqVBQlj0U2hsfmPx9DojqIYMunjk5BwKjmOTQddMM7WBj5kdHNwBug'
+    }
+
+    print(f'正在爬取第{page}页')
+    paramaa={
+    'q': 'app="phpStudy探针"',
+    'qbase64': qbase64,
+    'full': 'false',
+    'pn': page,
+    'ps': '10'
+    }
+    async with aiohttp.ClientSession() as s:
+        async with s.get(url=url,headers=headers,params=paramaa) as resp:
+            r=await resp.json()
+            for k in range(10):
+                ip_list.append(r['data']['assets'][k]['id'])
+            print(f'第{page}页，爬取完成')
+async def main():
+
+    task=[download(i) for i in range(1,101)]
+    await asyncio.wait(task)
+
+if __name__ == '__main__':
+    qbase64 = base64.b64encode(bytes(input("输入获取的：").encode('utf-8'))).decode('utf-8')
+    star=time.time()
+    asyncio.run(main())
+    print(ip_list)
+    print(len(ip_list))
+    print(time.time()-star)
+    with open('./fofa.txt', 'w', encoding='utf-8') as f:
+        for i in ip_list:
+            f.write(i + '\n')
